@@ -1,6 +1,9 @@
 import { useState } from "react";
+import "./App.css";
 
 function App() {
+
+  const [threadId, setThreadId] = useState("");
 
   const [patientCase, setPatientCase] = useState("");
 
@@ -15,7 +18,7 @@ function App() {
   const startConsultation = async () => {
 
     const response = await fetch(
-      "http://localhost:8000/consultation/start",
+      "http://localhost:8000/sessions/start",
       {
         method: "POST",
 
@@ -23,15 +26,18 @@ function App() {
           "Content-Type": "application/json",
         },
 
-        body: JSON.stringify({
-          patient_case: patientCase,
-        }),
+       body: JSON.stringify({
+       initial_case: patientCase,
+      }) 
       }
     );
 
     const data = await response.json();
 
-    setQuestion(data.current_question);
+    console.log(data);
+
+    setThreadId(data.thread_id);
+    setQuestion(data.question);
   };
 
   // ---------------------
@@ -39,7 +45,7 @@ function App() {
   const sendAnswer = async () => {
 
     const response = await fetch(
-      "http://localhost:8000/consultation/answer",
+      "http://localhost:8000/consultation/respond",
       {
         method: "POST",
 
@@ -48,40 +54,49 @@ function App() {
         },
 
         body: JSON.stringify({
+          thread_id: threadId,
           answer: answer,
         }),
       }
     );
 
     const data = await response.json();
+ // 👇 AJOUTE CETTE LIGNE
+  console.log("Réponse API :", data);
+  setAnswer("");
 
-    setAnswer("");
+  // Nouvelle question
+if (data.status === "question_pending") {
 
-    // Nouvelle question
-    if (data.current_question) {
+    setQuestion(data.question);
 
-      setQuestion(data.current_question);
+  }
 
-    } else {
+// Si la consultation est terminee
+else if (data.status === "completed") {
 
-      setQuestion("");
+    setQuestion("");
 
-      setReport(`
-${data.diagnostic_summary}
+    setReport(data.final_report);
 
-${data.interim_care}
-      `);
-    }
+    return;
+}
+
+// Sinon afficher la question suivante
+setQuestion(data.question);
   };
 
   // ---------------------
 
   return (
 
-    <div style={{ padding: "40px" }}>
+      <div className="container">
 
-      <h1>Système Médical Multi-Agents</h1>
+      <h1>🏥 Medical Multi-Agent Diagnosis</h1>
 
+      <p className="subtitle">
+      Intelligent Clinical Orientation System
+      </p>
       {!question && !report && (
 
         <div>
@@ -106,7 +121,7 @@ ${data.interim_care}
 
       {question && (
 
-        <div>
+        <div className="question-card">
 
           <h2>Question</h2>
 
@@ -130,9 +145,9 @@ ${data.interim_care}
 
       {report && (
 
-        <div>
+        <div className="report">
 
-          <h2>Synthèse Clinique</h2>
+        <h2>📋 Rapport Final</h2>
 
           <pre>{report}</pre>
 

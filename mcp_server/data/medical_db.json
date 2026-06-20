@@ -1,0 +1,29 @@
+{
+  "symptom_database": {
+    "respiratory": {
+      "keywords": ["toux", "fièvre", "respiration", "essoufflement", "gorge", "nez", "rhume"],
+      "common_conditions": ["infection respiratoire", "bronchite", "rhinite"],
+      "red_flags": ["difficulté respiratoire", "douleur thoracique", "cyanose"],
+      "advice": "Repos, hydratation abondante, éviter le tabac et les irritants"
+    },
+    "digestive": {
+      "keywords": ["nausée", "vomissement", "diarrhée", "douleur abdominale", "estomac"],
+      "common_conditions": ["gastro-entérite", "intoxication alimentaire", "constipation"],
+      "red_flags": ["sang dans selles", "déshydratation sévère", "fièvre élevée"],
+      "advice": "Régime léger, réhydratation orale, repos digestif"
+    },
+    "neurological": {
+      "keywords": ["maux tête", "vertige", "confusion", "vision", "céphalée"],
+      "common_conditions": ["migraine", "céphalée tensionnelle", "vertige positionnel"],
+      "red_flags": ["paralysie", "perte conscience", "convulsion", "aphasie"],
+      "advice": "Repos au calme, éviter les écrans, hydratation"
+    },
+    "general": {
+      "keywords": ["fatigue", "faiblesse", "malaise", "courbature", "fièvre"],
+      "common_conditions": ["syndrome viral", "fatigue générale", "déshydratation"],
+      "red_flags": ["fatigue extrême", "perte poids inexpliquée", "fièvre prolongée"],
+      "advice": "Repos, bonne alimentation, hydratation, surveillance des symptômes"
+    }
+  },
+  "consultations_history": []
+}

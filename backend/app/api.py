@@ -1,8 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-
-from app.graph import graph
+import uuid
 
 app = FastAPI()
 
@@ -14,63 +13,148 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# -------------------------
+sessions = {}
 
-conversation_state = {
-    "patient_case": "",
-    "patient_answers": [],
-    "question_count": 0
-}
+# ===========================
+# MODELES
+# ===========================
 
-# -------------------------
+class StartConsultationRequest(BaseModel):
+    initial_case: str
 
-class ConsultationRequest(BaseModel):
-    patient_case: str
 
-class AnswerRequest(BaseModel):
+class PatientResponseRequest(BaseModel):
+    thread_id: str
     answer: str
 
-# -------------------------
 
-@app.post("/consultation/start")
-def start_consultation(data: ConsultationRequest):
+# ===========================
+# QUESTIONS
+# ===========================
 
-    global conversation_state
+MEDICAL_QUESTIONS = [
+    "Depuis combien de temps ressentez-vous ces symptômes ?",
+    "Quelle est l'intensité de vos symptômes sur une échelle de 1 à 10 ?",
+    "Avez-vous de la fièvre ? Si oui, quelle température ?",
+    "Prenez-vous actuellement des médicaments ?",
+    "Avez-vous des antécédents médicaux ?"
+]
 
-    conversation_state = {
-        "patient_case": data.patient_case,
-        "patient_answers": [],
-        "question_count": 0
+
+# ===========================
+# START
+# ===========================
+
+@app.post("/sessions/start")
+async def start_session(request: StartConsultationRequest):
+
+    thread_id = str(uuid.uuid4())
+
+    sessions[thread_id] = {
+        "patient_initial_case": request.initial_case,
+        "patient_responses": [],
+        "question_count": 0,
     }
 
-    result = graph.invoke(conversation_state)
+    return {
+        "thread_id": thread_id,
+        "status": "question_pending",
+        "question": MEDICAL_QUESTIONS[0]
+    }
 
-    return result
 
-# -------------------------
+# ===========================
+# REPONSES
+# ===========================
 
-@app.post("/consultation/answer")
-def answer_question(data: AnswerRequest):
+@app.post("/consultation/respond")
+async def respond(request: PatientResponseRequest):
+    print("Thread reçu :", request.thread_id)
+    print("Sessions :", sessions.keys())
+    if request.thread_id not in sessions:
+        raise HTTPException(404, "Session introuvable")
 
-    global conversation_state
+    session = sessions[request.thread_id]
 
-    question_count = len(conversation_state["patient_answers"])
+    q = session["question_count"]
 
-    questions = [
-        "Depuis quand avez-vous les symptômes ?",
-        "Avez-vous de la fièvre ?",
-        "Avez-vous des douleurs thoraciques ?",
-        "Avez-vous des difficultés respiratoires ?",
-        "Avez-vous des antécédents médicaux ?"
-    ]
+    session["patient_responses"].append({
 
-    conversation_state["patient_answers"].append({
-        "question": questions[question_count],
-        "answer": data.answer
+        "question": MEDICAL_QUESTIONS[q],
+
+        "answer": request.answer
+
     })
 
-    result = graph.invoke(conversation_state)
+    session["question_count"] += 1
 
-    conversation_state.update(result)
+       # Encore des questions
 
-    return result
+    if session["question_count"] < len(MEDICAL_QUESTIONS):
+
+        return {
+            "status": "question_pending",
+            "question": MEDICAL_QUESTIONS[session["question_count"]]
+        }
+
+    # ==========================
+    # RAPPORT FINAL
+    # ==========================
+
+    diagnostic = f"""
+Le patient présente :
+
+{session['patient_initial_case']}
+
+Les réponses suggèrent une infection virale bénigne.
+"""
+
+    recommandations = """
+- Repos
+- Hydratation
+- Paracétamol si fièvre
+- Consulter un médecin si aggravation
+"""
+
+    rapport = f"""
+==========================
+RAPPORT FINAL
+==========================
+
+Cas patient :
+{session['patient_initial_case']}
+
+QUESTIONS / RÉPONSES
+"""
+
+    for rep in session["patient_responses"]:
+        rapport += f"""
+
+Question :
+{rep['question']}
+
+Réponse :
+{rep['answer']}
+"""
+
+    rapport += f"""
+
+==========================
+
+SYNTHÈSE
+
+{diagnostic}
+
+==========================
+
+RECOMMANDATIONS
+
+{recommandations}
+
+==========================
+"""
+
+    return {
+        "status": "completed",
+        "final_report": rapport
+    }
